@@ -1,0 +1,90 @@
+SETUP DEL PROYECTO
+=================
+
+Proyecto: Reconocimiento de Patrones
+Entorno: Python + Poetry + Jupyter (VS Code)
+
+------------------------------------
+1. REQUISITOS PREVIOS
+------------------------------------
+- Python 3.12 instalado
+- Poetry instalado
+- Visual Studio Code
+- Extensiones de VS Code:
+  - Python (Microsoft)
+  - Jupyter (Microsoft)
+
+Para verificar Poetry:
+> poetry --version
+
+------------------------------------
+2. CLONAR / ABRIR EL PROYECTO
+------------------------------------
+Abrir la carpeta raíz del proyecto en VS Code
+(donde se encuentra el archivo pyproject.toml)
+
+------------------------------------
+3. INSTALAR DEPENDENCIAS
+------------------------------------
+En la terminal de VS Code (PowerShell):
+
+> poetry install
+
+Esto creará el entorno virtual del proyecto.
+
+------------------------------------
+4. ACTIVAR EL ENTORNO (OPCIONAL)
+------------------------------------
+> poetry shell
+
+(O bien, usar siempre poetry run)
+
+------------------------------------
+5. CONFIGURAR JUPYTER KERNEL
+------------------------------------
+Ejecutar una sola vez:
+
+> poetry add ipykernel jupyterlab
+
+> python -m ipykernel install --user --name reconocimiento_patrones --display-name "Python (reconocimiento_patrones)"
+
+------------------------------------
+6. USAR EL PROYECTO EN VS CODE
+------------------------------------
+- Abrir un archivo .ipynb dentro de la carpeta /notebooks
+- Seleccionar el kernel:
+  Python (reconocimiento_patrones)
+
+  En vs code se hace ctrl+shift+p y luego "Python: Select Interpreter" y elegir el kernel creado.
+
+------------------------------------
+7. EJECUTAR NOTEBOOKS
+------------------------------------
+Los notebooks se ejecutan directamente en VS Code
+usando Shift + Enter o el botón de cada celda.
+
+------------------------------------
+8. AGREGAR NUEVAS DEPENDENCIAS
+------------------------------------
+Siempre usando Poetry:
+
+> poetry add numpy pandas matplotlib scikit-learn
+
+------------------------------------
+9. ESTRUCTURA DEL PROYECTO
+------------------------------------
+Recocimiento de patrones/
+│── pyproject.toml
+│── README.md
+│── setup.txt
+│── notebooks/
+│   └── exploracionStudentsStress.ipynb
+│── reconocimiento_patrones/
+│   └── __init__.py
+
+------------------------------------
+NOTAS
+------------------------------------
+- No usar pip install directamente.
+- Siempre seleccionar el intérprete de Poetry en VS Code.
+- Si el kernel no aparece, reiniciar VS Code.

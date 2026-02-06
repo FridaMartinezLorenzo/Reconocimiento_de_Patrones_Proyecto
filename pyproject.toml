@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "recocimiento de patrones"
+version = "0.1.0"
+description = ""
+authors = ["FridaMartinezLorenzo <117133767+FridaMartinezLorenzo@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "^3.0.0"
+numpy = "^2.4.2"
+kagglehub = "^0.4.2"
+matplotlib = "^3.10.8"
+seaborn = "^0.13.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
