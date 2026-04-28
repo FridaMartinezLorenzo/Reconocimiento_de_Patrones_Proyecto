@@ -1,137 +1,111 @@
 {
   "selected_features": [
+    "c_ACC_mag_zcr",
     "c_ACC_mag_iqr",
-    "w_EDA_mean",
-    "c_ECG_std",
-    "c_TEMP_mean",
-    "c_EDA_scr_std"
+    "c_ECG_hr_std",
+    "c_ACC_mag_std",
+    "c_RESP_q25"
   ],
-  "sfs_history": [
-    {
-      "step": 1,
-      "feature_added": "c_ACC_mag_iqr",
-      "accuracy": 0.8417726133515607
-    },
-    {
-      "step": 2,
-      "feature_added": "w_EDA_mean",
-      "accuracy": 0.9390020505809978
-    },
-    {
-      "step": 3,
-      "feature_added": "c_ECG_std",
-      "accuracy": 0.9723718386876282
-    },
-    {
-      "step": 4,
-      "feature_added": "c_TEMP_mean",
-      "accuracy": 0.9847527910685805
-    },
-    {
-      "step": 5,
-      "feature_added": "c_EDA_scr_std",
-      "accuracy": 0.9933287764866712
-    }
-  ],
+  "selection_method": "Fisher Score individual (filtrado)",
   "fisher_ranking_top20": [
     {
       "Caracter\u00edstica": "c_ACC_mag_zcr",
-      "Fisher_Score": 1.80520724502725,
+      "Fisher_Score": 0.6344942012711862,
       "Rank": 1
     },
     {
       "Caracter\u00edstica": "c_ACC_mag_iqr",
-      "Fisher_Score": 1.1913137854100215,
+      "Fisher_Score": 0.6104633025138934,
       "Rank": 2
     },
     {
-      "Caracter\u00edstica": "c_ACC_mag_std",
-      "Fisher_Score": 1.0117987895707363,
+      "Caracter\u00edstica": "c_ECG_hr_std",
+      "Fisher_Score": 0.5226391007391308,
       "Rank": 3
     },
     {
-      "Caracter\u00edstica": "c_ECG_hr_std",
-      "Fisher_Score": 0.8579369432698567,
+      "Caracter\u00edstica": "c_ACC_mag_std",
+      "Fisher_Score": 0.5060706645967292,
       "Rank": 4
     },
     {
       "Caracter\u00edstica": "c_RESP_q25",
-      "Fisher_Score": 0.849616067802104,
+      "Fisher_Score": 0.4279663033438931,
       "Rank": 5
     },
     {
-      "Caracter\u00edstica": "c_ECG_hr_mean",
-      "Fisher_Score": 0.793547171254659,
+      "Caracter\u00edstica": "c_RESP_std",
+      "Fisher_Score": 0.37481999775415314,
       "Rank": 6
     },
     {
-      "Caracter\u00edstica": "c_RESP_std",
-      "Fisher_Score": 0.772868853103975,
+      "Caracter\u00edstica": "c_EDA_scr_std",
+      "Fisher_Score": 0.3503980285535914,
       "Rank": 7
     },
     {
-      "Caracter\u00edstica": "c_EDA_spectral_entropy",
-      "Fisher_Score": 0.7246567308968335,
+      "Caracter\u00edstica": "c_ECG_iqr",
+      "Fisher_Score": 0.34918281559081643,
       "Rank": 8
     },
     {
-      "Caracter\u00edstica": "c_ECG_kurtosis",
-      "Fisher_Score": 0.6933136841516507,
+      "Caracter\u00edstica": "w_ACC_x_zcr",
+      "Fisher_Score": 0.33612494567045503,
       "Rank": 9
     },
     {
-      "Caracter\u00edstica": "c_RESP_max",
-      "Fisher_Score": 0.6585629923468903,
+      "Caracter\u00edstica": "c_RESP_spectral_energy",
+      "Fisher_Score": 0.3353768672988063,
       "Rank": 10
     },
     {
-      "Caracter\u00edstica": "c_RESP_spectral_entropy",
-      "Fisher_Score": 0.6579893057290095,
+      "Caracter\u00edstica": "c_RESP_max",
+      "Fisher_Score": 0.32550722318123043,
       "Rank": 11
     },
     {
-      "Caracter\u00edstica": "w_ACC_x_zcr",
-      "Fisher_Score": 0.656929556760264,
+      "Caracter\u00edstica": "c_ECG_hr_mean",
+      "Fisher_Score": 0.3152414696260783,
       "Rank": 12
     },
     {
-      "Caracter\u00edstica": "c_RESP_peak_freq",
-      "Fisher_Score": 0.6412588016546502,
+      "Caracter\u00edstica": "c_EDA_std",
+      "Fisher_Score": 0.29100623270045,
       "Rank": 13
     },
     {
-      "Caracter\u00edstica": "c_EDA_scr_num_peaks",
-      "Fisher_Score": 0.6335827598612284,
+      "Caracter\u00edstica": "c_RESP_peak_freq",
+      "Fisher_Score": 0.2908115210059122,
       "Rank": 14
     },
     {
-      "Caracter\u00edstica": "c_EDA_zcr",
-      "Fisher_Score": 0.6137741851444468,
+      "Caracter\u00edstica": "w_EDA_scr_std",
+      "Fisher_Score": 0.28827275188156826,
       "Rank": 15
     },
     {
-      "Caracter\u00edstica": "c_RESP_spectral_energy",
-      "Fisher_Score": 0.6024143126989511,
+      "Caracter\u00edstica": "c_ECG_q75",
+      "Fisher_Score": 0.279435675465701,
       "Rank": 16
     },
     {
-      "Caracter\u00edstica": "c_ECG_iqr",
-      "Fisher_Score": 0.5927219789043267,
+      "Caracter\u00edstica": "c_EDA_range",
+      "Fisher_Score": 0.2641213634695769,
       "Rank": 17
     },
     {
-      "Caracter\u00edstica": "c_ECG_q75",
-      "Fisher_Score": 0.5629659493531102,
+      "Caracter\u00edstica": "c_ECG_kurtosis",
+      "Fisher_Score": 0.2639714458666288,
       "Rank": 18
     },
     {
-      "Caracter\u00edstica": "c_ACC_mag_min",
-      "Fisher_Score": 0.5536132878510095,
+      "Caracter\u00edstica": "w_BVP_zcr",
+      "Fisher_Score": 0.2567734590709866,
       "Rank": 19
     },
     {
-      "Caracter\u00edstica": "c_EDA_scr_std",
-      "Fisher_Score": 0.5196135020986551,
+      "Caracter\u00edstica": "c_EDA_spectral_entropy",
+      "Fisher_Score": 0.251249126600695,
       "Rank": 20
     }
   ]
