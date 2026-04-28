@@ -65,7 +65,7 @@ schema_df = pd.DataFrame(summary_rows)
 print("\nEsquema de variables:")
 print(schema_df)
 
-schema_df.to_csv(BASE_DIR / "esquema_variables.csv", index=False)
+schema_df.to_csv(BASE_DIR /"resultados_1"/ "esquema_variables.csv", index=False)
 
 # ------------------------------------------------------------
 # 2 REVISION BASICA DEL DATASET
@@ -78,7 +78,7 @@ print("\nEstadisticas descriptivas:")
 print(df.describe())
 
 # Guardar dataset normalizado sin alterar el significado ordinal
-df.to_csv(BASE_DIR / "dataset_normalizado.csv", index=False)
+df.to_csv(BASE_DIR /"resultados_1"/ "dataset_normalizado.csv", index=False)
 
 # ------------------------------------------------------------
 # 3 DEFINIR VARIABLES PARA CLASIFICACION
@@ -103,7 +103,7 @@ print("\nRanking de caracteristicas:")
 print(mi_scores)
 
 # guardar ranking
-mi_scores.to_csv(BASE_DIR / "ranking_informacion_mutua.csv")
+mi_scores.to_csv(BASE_DIR /"resultados_1"/ "ranking_informacion_mutua.csv")
 
 # ------------------------------------------------------------
 # 4.1 CALCULAR CHI-CUADRADO
@@ -127,7 +127,7 @@ chi2_df = pd.DataFrame(
     }
 )
 
-chi2_df.to_csv(BASE_DIR / "ranking_chi2.csv", index=False)
+chi2_df.to_csv(BASE_DIR /"resultados_1"/ "ranking_chi2.csv", index=False)
 
 print("\nTop 10 caracteristicas por Chi-cuadrado (score + p-value):")
 print(chi2_df.head(10).to_string(index=False))
@@ -147,7 +147,7 @@ plt.title("Top 10 caracteristicas por Chi-cuadrado")
 plt.xlabel("Chi-cuadrado")
 plt.ylabel("Caracteristica")
 plt.tight_layout()
-plt.savefig(BASE_DIR / "ranking_chi2_top10.png")
+plt.savefig(BASE_DIR /"resultados_1"/ "ranking_chi2_top10.png")
 plt.close()
 
 # Comparacion de metodos para facilitar interpretacion
@@ -170,7 +170,7 @@ comparison_df["rank_chi2"] = comparison_df["chi2_score"].rank(
 )
 
 comparison_df = comparison_df.sort_values("rank_mutual_info")
-comparison_df.to_csv(BASE_DIR / "comparacion_metodos_features.csv", index=False)
+comparison_df.to_csv(BASE_DIR /"resultados_1"/ "comparacion_metodos_features.csv", index=False)
 
 # ------------------------------------------------------------
 # 4.2 COMPARACION GRAFICA ENTRE METODOS
@@ -224,7 +224,7 @@ plt.xlabel("Score normalizado")
 plt.ylabel("Caracteristica")
 plt.legend(title="Metodo")
 plt.tight_layout()
-plt.savefig(BASE_DIR / "comparacion_metodos_top10.png")
+plt.savefig(BASE_DIR /"resultados_1"/ "comparacion_metodos_top10.png")
 plt.close()
 
 # ------------------------------------------------------------
@@ -267,7 +267,7 @@ plt.title("Comparacion de rankings: Informacion Mutua vs Chi-cuadrado")
 plt.xlabel("Rank (Informacion Mutua)")
 plt.ylabel("Rank (Chi-cuadrado)")
 plt.tight_layout()
-plt.savefig(BASE_DIR / "comparacion_ranks_scatter.png")
+plt.savefig(BASE_DIR /"resultados_1"/ "comparacion_ranks_scatter.png")
 plt.close()
 
 # 2) Variables con mayor diferencia de ranking entre metodos
@@ -286,7 +286,7 @@ plt.title("Top 10 diferencias de ranking entre metodos")
 plt.xlabel("Diferencia absoluta de rank")
 plt.ylabel("Caracteristica")
 plt.tight_layout()
-plt.savefig(BASE_DIR / "diferencia_ranks_top10.png")
+plt.savefig(BASE_DIR /"resultados_1"/ "diferencia_ranks_top10.png")
 plt.close()
 
 # ------------------------------------------------------------
@@ -307,7 +307,7 @@ plt.ylabel("Caracteristica")
 
 plt.tight_layout()
 
-plt.savefig(BASE_DIR / "ranking_informacion_mutua.png")
+plt.savefig(BASE_DIR /"resultados_1"/ "ranking_informacion_mutua.png")
 plt.close()
 
 # ------------------------------------------------------------
@@ -330,7 +330,7 @@ plt.title("Matriz de correlacion")
 
 plt.tight_layout()
 
-plt.savefig(BASE_DIR / "heatmap_correlacion.png")
+plt.savefig(BASE_DIR /"resultados_1"/ "heatmap_correlacion.png")
 plt.close()
 
 # ------------------------------------------------------------
@@ -354,7 +354,7 @@ for feature in features_to_plot:
     
     plt.tight_layout()
     
-    plt.savefig(BASE_DIR / f"distribucion_{feature}.png")
+    plt.savefig(BASE_DIR /"resultados_1"/ f"distribucion_{feature}.png")
     plt.close()
 
 # ------------------------------------------------------------
