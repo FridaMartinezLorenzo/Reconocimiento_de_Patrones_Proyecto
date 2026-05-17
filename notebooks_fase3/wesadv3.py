@@ -1367,21 +1367,618 @@ X_final = X_scaled[selected_features].copy()
 X_final['label'] = y.values
 X_final.to_csv(os.path.join(OUTPUT_DIR, 'wesad_final_5features.csv'), index=False)
 
+# ============================================================================
+# ACTIVIDAD 6: ENTRENAMIENTO, EVALUACIÓN Y COMPARACIÓN DE MODELOS
+# ============================================================================
+print("\n\n" + "=" * 80)
+print("ACTIVIDAD 6: ENTRENAMIENTO Y COMPARACIÓN DE MODELOS (TODAS vs TOP-5 FEATURES)")
+print("=" * 80)
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (accuracy_score, precision_score,
+                             recall_score, f1_score,
+                             classification_report, confusion_matrix)
+from sklearn.naive_bayes import GaussianNB
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.impute import SimpleImputer
+
+# ---------------------------------------------------------------------------
+# 6.1  Split 70 / 30  (reproducible con semilla fija)
+# ---------------------------------------------------------------------------
+RANDOM_STATE = 42
+TEST_SIZE    = 0.30
+
+print(f"\n--- 6.1  Split de datos: {int((1-TEST_SIZE)*100)}% train / {int(TEST_SIZE*100)}% test "
+      f"(random_state={RANDOM_STATE}) ---")
+
+X_all   = X_scaled                    # todas las características preprocesadas
+X_top5  = X_scaled[selected_features] # sólo las top-5 de Fisher
+
+X_all_train,  X_all_test,  y_train, y_test = train_test_split(
+    X_all, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
+)
+X_top5_train, X_top5_test, _,       _      = train_test_split(
+    X_top5, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
+)
+
+# Imputación de NaNs (media por columna, ajustada sólo en train para evitar
+# data leakage). GaussianNB no acepta NaN de forma nativa.
+nan_all  = X_all_train.isna().sum().sum()
+nan_top5 = X_top5_train.isna().sum().sum()
+if nan_all > 0 or nan_top5 > 0:
+    print(f"\n  ⚠ NaNs detectados — aplicando imputación por media de train "
+          f"(all: {nan_all}, top-5: {nan_top5})")
+
+imputer_all  = SimpleImputer(strategy='mean')
+imputer_top5 = SimpleImputer(strategy='mean')
+
+X_all_train  = pd.DataFrame(imputer_all.fit_transform(X_all_train),
+                             columns=X_all_train.columns)
+X_all_test   = pd.DataFrame(imputer_all.transform(X_all_test),
+                             columns=X_all_test.columns)
+X_top5_train = pd.DataFrame(imputer_top5.fit_transform(X_top5_train),
+                             columns=X_top5_train.columns)
+X_top5_test  = pd.DataFrame(imputer_top5.transform(X_top5_test),
+                             columns=X_top5_test.columns)
+
+print(f"  Total muestras   : {len(y)}")
+print(f"  Train            : {len(y_train)}  "
+      f"(stress={y_train.sum()}, no-stress={(y_train==0).sum()})")
+print(f"  Test             : {len(y_test)}   "
+      f"(stress={y_test.sum()}, no-stress={(y_test==0).sum()})")
+
+# ---------------------------------------------------------------------------
+# 6.2  Definición de clasificadores a evaluar
+# ---------------------------------------------------------------------------
+classifiers = {
+    'Random Forest'  : RandomForestClassifier(n_estimators=100, random_state=RANDOM_STATE),
+    'Naive Bayes'    : GaussianNB(),
+    'Decision Tree'  : DecisionTreeClassifier(random_state=RANDOM_STATE),
+}
+
+# ---------------------------------------------------------------------------
+# 6.3  Entrenamiento y evaluación
+# ---------------------------------------------------------------------------
+print("\n--- 6.3  Entrenamiento y evaluación ---")
+
+def evaluate_model(clf, X_tr, X_te, y_tr, y_te, label):
+    """Entrena clf, predice sobre test y devuelve dict de métricas + probabilidades."""
+    clf.fit(X_tr, y_tr)
+    y_pred  = clf.predict(X_te)
+    y_proba = clf.predict_proba(X_te)   # shape (n_samples, n_classes)
+    return {
+        'label'    : label,
+        'accuracy' : accuracy_score(y_te, y_pred),
+        'precision': precision_score(y_te, y_pred, zero_division=0),
+        'recall'   : recall_score(y_te, y_pred, zero_division=0),
+        'f1'       : f1_score(y_te, y_pred, zero_division=0),
+        'y_pred'   : y_pred,
+        'y_proba'  : y_proba,
+        'clf'      : clf,
+        'X_te'     : X_te,
+    }
+
+all_results = {}   # clf_name -> {'all': metrics_dict, 'top5': metrics_dict}
+
+for clf_name, clf_proto in classifiers.items():
+    print(f"\n  ── {clf_name} ──")
+
+    # Clonar para no reutilizar el mismo objeto entrenado
+    import copy
+    clf_all  = copy.deepcopy(clf_proto)
+    clf_top5 = copy.deepcopy(clf_proto)
+
+    res_all  = evaluate_model(clf_all,  X_all_train,  X_all_test,
+                               y_train, y_test, f"{clf_name} – Todas")
+    res_top5 = evaluate_model(clf_top5, X_top5_train, X_top5_test,
+                               y_train, y_test, f"{clf_name} – Top-5 Fisher")
+
+    all_results[clf_name] = {'all': res_all, 'top5': res_top5}
+
+    for res in (res_all, res_top5):
+        tag = "Todas las features" if "Todas" in res['label'] else f"Top-5 Fisher features"
+        print(f"\n    [{tag}]")
+        print(f"      Accuracy  : {res['accuracy']:.4f}")
+        print(f"      Precision : {res['precision']:.4f}")
+        print(f"      Recall    : {res['recall']:.4f}")
+        print(f"      F1-Score  : {res['f1']:.4f}")
+
+# ---------------------------------------------------------------------------
+# 6.4  Tabla comparativa de métricas
+# ---------------------------------------------------------------------------
+print(f"\n\n{'='*80}")
+print("TABLA COMPARATIVA DE MÉTRICAS")
+print(f"{'='*80}")
+
+header = f"{'Modelo':<38} {'Acc':>7} {'Prec':>7} {'Rec':>7} {'F1':>7}"
+print(header)
+print("-" * len(header))
+
+rows = []
+for clf_name, results in all_results.items():
+    for key, res in results.items():
+        tag = "Todas" if key == "all" else "Top-5"
+        label = f"{clf_name} [{tag}]"
+        rows.append({
+            'label'    : label,
+            'accuracy' : res['accuracy'],
+            'precision': res['precision'],
+            'recall'   : res['recall'],
+            'f1'       : res['f1'],
+        })
+        print(f"  {label:<36} {res['accuracy']:>7.4f} {res['precision']:>7.4f} "
+              f"{res['recall']:>7.4f} {res['f1']:>7.4f}")
+
+# ---------------------------------------------------------------------------
+# 6.4b  Reporte por clase: Precision, Recall y F1-Score detallados
+# ---------------------------------------------------------------------------
+print(f"\n\n{'='*80}")
+print("REPORTE POR CLASE — Precision, Recall y F1-Score (No-Stress / Stress)")
+print(f"{'='*80}")
+
+class_names_report = ['No-Stress', 'Stress']
+
+for clf_name, results in all_results.items():
+    for key, res in results.items():
+        tag = "Todas las features" if key == "all" else "Top-5 Fisher"
+        print(f"\n  ── {clf_name}  [{tag}] ──")
+        report = classification_report(
+            y_test, res['y_pred'],
+            target_names=class_names_report,
+            zero_division=0
+        )
+        # Indentar el reporte para que quede alineado
+        for line in report.splitlines():
+            print(f"    {line}")
+
+# Gráfica de barras agrupadas: Precision / Recall / F1 por clase y modelo
+# Una figura por configuración de features (Todas | Top-5)
+for fkey, flabel in [('all', 'Todas las features'), ('top5', 'Top-5 Fisher')]:
+    clf_list   = list(all_results.keys())
+    n_clf      = len(clf_list)
+    metrics_pc = ['precision', 'recall', 'f1']
+    metric_lbls = ['Precision', 'Recall', 'F1-Score']
+    colors_cls  = ['#2ecc71', '#e74c3c']   # verde = No-Stress, rojo = Stress
+
+    fig_pc, axes_pc = plt.subplots(1, n_clf, figsize=(7 * n_clf, 5), sharey=True)
+    if n_clf == 1:
+        axes_pc = [axes_pc]
+
+    for col, clf_name in enumerate(clf_list):
+        ax   = axes_pc[col]
+        res  = all_results[clf_name][fkey]
+        y_pd = res['y_pred']
+
+        # Calcular métricas por clase
+        prec_per  = precision_score(y_test, y_pd, average=None, zero_division=0)
+        rec_per   = recall_score(y_test,    y_pd, average=None, zero_division=0)
+        f1_per    = f1_score(y_test,        y_pd, average=None, zero_division=0)
+        vals_by_class = [prec_per, rec_per, f1_per]   # (3, n_classes)
+
+        x     = np.arange(len(metrics_pc))
+        width = 0.28
+
+        for ci, (cname, ccolor) in enumerate(zip(class_names_report, colors_cls)):
+            vals = [vals_by_class[mi][ci] for mi in range(len(metrics_pc))]
+            offset = (ci - (len(class_names_report) - 1) / 2) * width
+            bars = ax.bar(x + offset, vals, width, label=cname,
+                          color=ccolor, alpha=0.82)
+            for bar in bars:
+                ax.text(bar.get_x() + bar.get_width() / 2,
+                        bar.get_height() + 0.02,
+                        f'{bar.get_height():.3f}',
+                        ha='center', va='bottom', fontsize=8)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(metric_lbls, fontsize=11)
+        ax.set_ylim(0, 1.18)
+        ax.set_ylabel('Valor', fontsize=10)
+        ax.set_title(clf_name, fontsize=12, fontweight='bold')
+        ax.legend(fontsize=9)
+        ax.grid(True, axis='y', alpha=0.3)
+
+    fig_pc.suptitle(f'Precision, Recall y F1-Score por Clase\n[{flabel}]',
+                    fontsize=13, fontweight='bold')
+    plt.tight_layout()
+    fname = f"fig8b_metrics_per_class_{'all' if fkey == 'all' else 'top5'}.png"
+    plt.savefig(os.path.join(OUTPUT_DIR, fname), dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"\nGráfica por clase guardada: {fname}")
+
+# ---------------------------------------------------------------------------
+# 6.5  Análisis del impacto de la selección de características
+# ---------------------------------------------------------------------------
+print(f"\n\n{'='*80}")
+print("ANÁLISIS DEL IMPACTO DE LA SELECCIÓN DE CARACTERÍSTICAS")
+print(f"{'='*80}")
+
+for clf_name, results in all_results.items():
+    r_all  = results['all']
+    r_top5 = results['top5']
+    delta_acc = r_top5['accuracy'] - r_all['accuracy']
+    delta_f1  = r_top5['f1']       - r_all['f1']
+    n_all     = X_all.shape[1]
+    reduction = (1 - 5 / n_all) * 100
+
+    print(f"\n  {clf_name}:")
+    print(f"    Reducción de dimensionalidad : {n_all} → 5 features  ({reduction:.1f}% menos)")
+    print(f"    ΔAccuracy  (Top-5 − Todas)   : {delta_acc:+.4f}")
+    print(f"    ΔF1-Score  (Top-5 − Todas)   : {delta_f1:+.4f}")
+    verdict = "SIN pérdida significativa" if abs(delta_f1) < 0.02 else \
+              ("MEJORA" if delta_f1 > 0 else "PÉRDIDA")
+    print(f"    Conclusión                   : {verdict} de rendimiento con Top-5")
+
+# ---------------------------------------------------------------------------
+# 6.6  Matrices de confusión y gráfica comparativa
+# ---------------------------------------------------------------------------
+fig, axes = plt.subplots(3, 4, figsize=(22, 15))
+class_names = ['No-Stress', 'Stress']
+metrics_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
+
+row_idx = 0
+for clf_name, results in all_results.items():
+    # Columnas 0-1: matrices de confusión
+    for col_idx, (key, res) in enumerate(results.items()):
+        ax = axes[row_idx][col_idx]
+        cm = confusion_matrix(y_test, res['y_pred'])
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax,
+                    xticklabels=class_names, yticklabels=class_names,
+                    linewidths=0.5, cbar=False)
+        tag = "Todas" if key == "all" else "Top-5 Fisher"
+        ax.set_title(f"{clf_name}\n[{tag}]", fontsize=10, fontweight='bold')
+        ax.set_xlabel('Predicho', fontsize=9)
+        ax.set_ylabel('Real', fontsize=9)
+
+    # Columnas 2-3: barras de métricas (Todas vs Top-5)
+    ax_bar = axes[row_idx][2]
+    metric_vals_all  = [results['all']['accuracy'],  results['all']['precision'],
+                        results['all']['recall'],    results['all']['f1']]
+    metric_vals_top5 = [results['top5']['accuracy'], results['top5']['precision'],
+                        results['top5']['recall'],   results['top5']['f1']]
+
+    x = np.arange(len(metrics_names))
+    width = 0.35
+    bars1 = ax_bar.bar(x - width/2, metric_vals_all,  width, label='Todas',     color='#3498db', alpha=0.85)
+    bars2 = ax_bar.bar(x + width/2, metric_vals_top5, width, label='Top-5',     color='#e74c3c', alpha=0.85)
+    ax_bar.set_xticks(x)
+    ax_bar.set_xticklabels(metrics_names, fontsize=9)
+    ax_bar.set_ylim(0, 1.15)
+    ax_bar.set_ylabel('Valor', fontsize=10)
+    ax_bar.set_title(f"{clf_name}\nComparativa de Métricas", fontsize=10, fontweight='bold')
+    ax_bar.legend(fontsize=9)
+    ax_bar.grid(True, axis='y', alpha=0.3)
+    for bar in list(bars1) + list(bars2):
+        ax_bar.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
+                    f'{bar.get_height():.3f}', ha='center', va='bottom', fontsize=8)
+
+    # Columna 3: tabla de delta
+    ax_delta = axes[row_idx][3]
+    ax_delta.axis('off')
+    deltas = [round(t - a, 4) for t, a in zip(metric_vals_top5, metric_vals_all)]
+    table_data = [[m, f'{a:.4f}', f'{t:.4f}', f'{d:+.4f}']
+                  for m, a, t, d in zip(metrics_names, metric_vals_all, metric_vals_top5, deltas)]
+    tbl = ax_delta.table(
+        cellText=table_data,
+        colLabels=['Métrica', 'Todas', 'Top-5', 'Δ'],
+        loc='center', cellLoc='center'
+    )
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1.2, 1.6)
+    # Colorear deltas
+    for i, d in enumerate(deltas):
+        color = '#d5f5e3' if d >= 0 else '#fadbd8'
+        tbl[(i+1, 3)].set_facecolor(color)
+    ax_delta.set_title(f"{clf_name}\nΔ Top-5 vs Todas", fontsize=10, fontweight='bold')
+
+    row_idx += 1
+
+plt.suptitle('Actividad 6 – Comparación de Modelos: Todas las Features vs Top-5 Fisher',
+             fontsize=13, fontweight='bold', y=1.01)
+plt.tight_layout()
+plt.savefig(os.path.join(OUTPUT_DIR, 'fig8_model_comparison.png'), dpi=150, bbox_inches='tight')
+plt.close()
+print("\nGráfica comparativa de modelos guardada.")
+
+# Guardar métricas en CSV
+metrics_df = pd.DataFrame(rows)
+metrics_df.to_csv(os.path.join(OUTPUT_DIR, 'model_metrics_comparison.csv'), index=False)
+print("Tabla de métricas guardada en model_metrics_comparison.csv")
+
+# ---------------------------------------------------------------------------
+# 6.7  Ejemplo de probabilidades de salida por modelo
+# ---------------------------------------------------------------------------
+print(f"\n\n{'='*80}")
+print("PROBABILIDADES DE SALIDA — EJEMPLO CON 5 INSTANCIAS DEL TEST")
+print(f"{'='*80}")
+print("(Se muestran la probabilidad P(No-Stress) y P(Stress) para cada instancia)")
+
+# Tomar 5 índices representativos: primeros 3 + un TP y un FP si los hay
+np.random.seed(RANDOM_STATE)
+sample_idx = np.random.choice(len(y_test), size=min(5, len(y_test)), replace=False)
+sample_idx = np.sort(sample_idx)
+
+y_test_arr = np.array(y_test)
+
+for clf_name, results in all_results.items():
+    print(f"\n  ── {clf_name} ──")
+    for key, res in results.items():
+        tag   = "Todas las features" if key == "all" else "Top-5 Fisher"
+        proba = res['y_proba']
+        pred  = res['y_pred']
+        print(f"\n    [{tag}]")
+        print(f"    {'Inst':>5}  {'Real':>9}  {'Predicho':>9}  "
+              f"{'P(No-Stress)':>13}  {'P(Stress)':>10}  {'Correcto':>9}")
+        print(f"    {'-'*65}")
+        for i in sample_idx:
+            real_lbl  = 'Stress' if y_test_arr[i] == 1 else 'No-Stress'
+            pred_lbl  = 'Stress' if pred[i]        == 1 else 'No-Stress'
+            p_no      = proba[i][0]
+            p_yes     = proba[i][1]
+            correct   = '✓' if y_test_arr[i] == pred[i] else '✗'
+            print(f"    {i:>5}  {real_lbl:>9}  {pred_lbl:>9}  "
+                  f"{p_no:>13.4f}  {p_yes:>10.4f}  {correct:>9}")
+
+# Gráfica: probabilidades para las 5 instancias — todos los modelos en un solo panel
+clf_names  = list(all_results.keys())
+feat_keys  = ['all', 'top5']
+feat_labels = ['Todas', 'Top-5']
+n_models   = len(clf_names)
+n_feat     = len(feat_keys)
+n_instances = len(sample_idx)
+
+fig, axes_p = plt.subplots(n_models, n_feat,
+                            figsize=(14, 4 * n_models),
+                            sharey=True)
+if n_models == 1:
+    axes_p = np.array([axes_p])
+
+x_inst = np.arange(n_instances)
+width  = 0.35
+
+for r, clf_name in enumerate(clf_names):
+    for c, (fkey, flabel) in enumerate(zip(feat_keys, feat_labels)):
+        ax    = axes_p[r][c]
+        proba = all_results[clf_name][fkey]['y_proba']
+        pred  = all_results[clf_name][fkey]['y_pred']
+
+        p_no  = [proba[i][0] for i in sample_idx]
+        p_yes = [proba[i][1] for i in sample_idx]
+        reals = [y_test_arr[i] for i in sample_idx]
+
+        b1 = ax.bar(x_inst - width/2, p_no,  width, label='P(No-Stress)',
+                    color='#3498db', alpha=0.85)
+        b2 = ax.bar(x_inst + width/2, p_yes, width, label='P(Stress)',
+                    color='#e74c3c', alpha=0.85)
+
+        # Marcar predicción correcta / incorrecta sobre cada instancia
+        for k, idx in enumerate(sample_idx):
+            marker = '✓' if y_test_arr[idx] == pred[idx] else '✗'
+            color  = 'green' if marker == '✓' else 'red'
+            ax.text(k, 1.04, marker, ha='center', va='bottom',
+                    fontsize=13, color=color, fontweight='bold')
+
+        ax.set_xticks(x_inst)
+        ax.set_xticklabels([f"inst {i}\n({'S' if r_ == 1 else 'NS'})"
+                            for i, r_ in zip(sample_idx, reals)], fontsize=8)
+        ax.set_ylim(0, 1.15)
+        ax.set_ylabel('Probabilidad', fontsize=9)
+        ax.set_title(f"{clf_name} [{flabel}]", fontsize=10, fontweight='bold')
+        ax.axhline(0.5, color='gray', linestyle='--', linewidth=0.8, alpha=0.6)
+        ax.legend(fontsize=8, loc='upper right')
+        ax.grid(True, axis='y', alpha=0.25)
+
+plt.suptitle('Probabilidades de Salida por Modelo — 5 Instancias de Ejemplo\n'
+             '(✓ = predicción correcta, ✗ = incorrecta  |  S=Stress, NS=No-Stress)',
+             fontsize=12, fontweight='bold', y=1.01)
+plt.tight_layout()
+plt.savefig(os.path.join(OUTPUT_DIR, 'fig9_output_probabilities.png'),
+            dpi=150, bbox_inches='tight')
+plt.close()
+print("\nGráfica de probabilidades guardada.")
+
+# ============================================================================
+# ACTIVIDAD 7: CÁLCULO MANUAL — NAIVE BAYES Y DECISION TREE
+#              para los elementos 33 y 78 del conjunto de prueba
+# ============================================================================
+print("\n\n" + "=" * 80)
+print("ACTIVIDAD 7: CÁLCULO MANUAL PASO A PASO")
+print("           Naive Bayes Gaussiano  |  Decision Tree")
+print("           Instancias de test: índices 33 y 78")
+print("=" * 80)
+
+MANUAL_IDX = [33, 78]
+
+# Usamos el subconjunto Top-5 para que el cálculo sea legible
+X_manual = X_top5_test
+y_manual  = np.array(y_test)
+
+# Recuperar el Naive Bayes y el Decision Tree ya entrenados (con Top-5)
+nb_model  = all_results['Naive Bayes']['top5']['clf']
+dt_model  = all_results['Decision Tree']['top5']['clf']
+
+classes       = nb_model.classes_          # [0, 1]
+class_labels  = {0: 'No-Stress', 1: 'Stress'}
+feature_names = list(X_top5_train.columns)
+X_train_arr   = X_top5_train.values
+y_train_arr   = np.array(y_train)
+
+# ── Pre-calcular estadísticas de entrenamiento para Naive Bayes ──────────────
+nb_stats = {}          # clase → {'prior', 'mean': [], 'std': []}
+N_train  = len(y_train_arr)
+for c in classes:
+    mask   = y_train_arr == c
+    X_c    = X_train_arr[mask]
+    nb_stats[c] = {
+        'prior': mask.sum() / N_train,
+        'mean' : X_c.mean(axis=0),
+        'std'  : X_c.std(axis=0) + 1e-9,   # evitar división por 0
+    }
+
+def gaussian_pdf(x, mean, std):
+    """Densidad gaussiana N(mean, std²) evaluada en x."""
+    coef  = 1.0 / (std * np.sqrt(2 * np.pi))
+    exp   = np.exp(-0.5 * ((x - mean) / std) ** 2)
+    return coef * exp
+
+
+# ── Recorrer el árbol de decisión manualmente ─────────────────────────────────
+def trace_decision_tree(dt, x_row, feat_names):
+    """
+    Recorre el árbol nodo a nodo y devuelve la lista de pasos
+    con la regla aplicada en cada bifurcación.
+    """
+    tree_      = dt.tree_
+    node_id    = 0
+    path       = []
+
+    while tree_.feature[node_id] != -2:   # -2 = nodo hoja
+        feat_idx   = tree_.feature[node_id]
+        threshold  = tree_.threshold[node_id]
+        feat_name  = feat_names[feat_idx]
+        feat_val   = x_row[feat_idx]
+        go_left    = feat_val <= threshold
+        direction  = "≤ (izq)" if go_left else "> (der)"
+        path.append({
+            'node'     : node_id,
+            'feature'  : feat_name,
+            'threshold': threshold,
+            'value'    : feat_val,
+            'direction': direction,
+        })
+        node_id = tree_.children_left[node_id] if go_left \
+                  else tree_.children_right[node_id]
+
+    # Nodo hoja: distribución de clases
+    leaf_values = tree_.value[node_id][0]          # counts por clase
+    leaf_total  = leaf_values.sum()
+    leaf_proba  = leaf_values / leaf_total
+    predicted   = int(dt.classes_[np.argmax(leaf_proba)])
+    return path, node_id, leaf_values, leaf_proba, predicted
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+for inst_idx in MANUAL_IDX:
+
+    x_row  = X_manual.iloc[inst_idx].values
+    y_real = y_manual[inst_idx]
+
+    print(f"\n{'─'*80}")
+    print(f"  INSTANCIA  idx={inst_idx}  |  Etiqueta real: {class_labels[y_real]}")
+    print(f"{'─'*80}")
+    print(f"\n  Valores de las {len(feature_names)} features (Top-5 Fisher):")
+    for fn, fv in zip(feature_names, x_row):
+        print(f"    {fn:<38} = {fv:.6f}")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # A) NAIVE BAYES GAUSSIANO — CÁLCULO MANUAL
+    # ──────────────────────────────────────────────────────────────────────────
+    print(f"\n  {'━'*76}")
+    print(f"  A) NAIVE BAYES GAUSSIANO — cálculo paso a paso")
+    print(f"  {'━'*76}")
+    print(f"\n  Fórmula aplicada:")
+    print(f"    P(cⱼ | x) ∝  P(cⱼ)  ×  ∏_k  f(xₖ | μ_{{k,j}}, σ_{{k,j}})")
+    print(f"    donde f es la densidad gaussiana N(μ, σ²)\n")
+
+    log_posteriors = {}
+
+    for c in classes:
+        prior = nb_stats[c]['prior']
+        means = nb_stats[c]['mean']
+        stds  = nb_stats[c]['std']
+
+        print(f"  ── Clase: {class_labels[c]}  (prior P(c)={prior:.4f}) ──")
+        print(f"    {'Feature':<38} {'x':>10} {'μ':>10} {'σ':>10} {'f(x|μ,σ)':>14} {'log f':>10}")
+        print(f"    {'-'*94}")
+
+        log_likelihood = 0.0
+        for k, (fn, xk, mk, sk) in enumerate(zip(feature_names, x_row, means, stds)):
+            pdf_val  = gaussian_pdf(xk, mk, sk)
+            log_pdf  = np.log(pdf_val + 1e-300)
+            log_likelihood += log_pdf
+            print(f"    {fn:<38} {xk:>10.5f} {mk:>10.5f} {sk:>10.5f} "
+                  f"{pdf_val:>14.6e} {log_pdf:>10.4f}")
+
+        log_post = np.log(prior) + log_likelihood
+        log_posteriors[c] = log_post
+        print(f"\n    log P(c) + Σ log f  =  log({prior:.4f}) + ({log_likelihood:.4f})")
+        print(f"                        =  {np.log(prior):.4f} + ({log_likelihood:.4f})")
+        print(f"                        =  {log_post:.4f}  ← log-posterior\n")
+
+    # Convertir a probabilidades normalizadas
+    max_lp   = max(log_posteriors.values())
+    exp_vals = {c: np.exp(lp - max_lp) for c, lp in log_posteriors.items()}
+    total    = sum(exp_vals.values())
+    posteriors = {c: v / total for c, v in exp_vals.items()}
+
+    nb_pred_manual = max(posteriors, key=posteriors.get)
+    nb_pred_sklearn = int(nb_model.predict(x_row.reshape(1, -1))[0])
+
+    print(f"  Normalización (softmax sobre log-posteriors):")
+    for c in classes:
+        print(f"    P({class_labels[c]:>10} | x)  =  {posteriors[c]:.6f}")
+    print(f"\n  ► Predicción MANUAL   : {class_labels[nb_pred_manual]}")
+    print(f"  ► Predicción sklearn  : {class_labels[nb_pred_sklearn]}")
+    match_nb = "✓ Coinciden" if nb_pred_manual == nb_pred_sklearn else "✗ Difieren"
+    print(f"  ► Verificación        : {match_nb}")
+    print(f"  ► Etiqueta real       : {class_labels[y_real]}")
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # B) DECISION TREE — CÁLCULO MANUAL (recorrido nodo a nodo)
+    # ──────────────────────────────────────────────────────────────────────────
+    print(f"\n  {'━'*76}")
+    print(f"  B) DECISION TREE — recorrido manual del árbol")
+    print(f"  {'━'*76}")
+    print(f"\n  El árbol aplica reglas binarias en cada nodo interno:")
+    print(f"  si feature ≤ umbral  →  rama izquierda, sino  →  rama derecha\n")
+
+    path, leaf_node, leaf_vals, leaf_proba, dt_pred_manual = \
+        trace_decision_tree(dt_model, x_row, feature_names)
+    dt_pred_sklearn = int(dt_model.predict(x_row.reshape(1, -1))[0])
+
+    print(f"  {'Paso':<5} {'Nodo':>5}  {'Feature':<38} "
+          f"{'x':>10} {'Umbral':>10}  {'Dirección':<10}")
+    print(f"  {'-'*83}")
+    for step_i, step in enumerate(path, 1):
+        print(f"  {step_i:<5} {step['node']:>5}  {step['feature']:<38} "
+              f"{step['value']:>10.5f} {step['threshold']:>10.5f}  {step['direction']:<10}")
+
+    print(f"\n  Nodo hoja alcanzado: nodo {leaf_node}")
+    print(f"  Distribución en la hoja (muestras de entrenamiento):")
+    for c, cnt, p in zip(classes, leaf_vals, leaf_proba):
+        print(f"    {class_labels[c]:>10}: {int(cnt):>5} muestras  →  P = {p:.4f}")
+
+    print(f"\n  ► Predicción MANUAL   : {class_labels[dt_pred_manual]}")
+    print(f"  ► Predicción sklearn  : {class_labels[dt_pred_sklearn]}")
+    match_dt = "✓ Coinciden" if dt_pred_manual == dt_pred_sklearn else "✗ Difieren"
+    print(f"  ► Verificación        : {match_dt}")
+    print(f"  ► Etiqueta real       : {class_labels[y_real]}")
+
+print(f"\n{'═'*80}")
+print("FIN DE CÁLCULOS MANUALES")
+print(f"{'═'*80}")
+
 print(f"\n\n{'='*80}")
 print(f"PIPELINE COMPLETADO EXITOSAMENTE")
 print(f"{'='*80}")
 print(f"\nArchivos generados en {OUTPUT_DIR}:")
-print(f"  - wesad_features.csv           (dataset completo con features)")
-print(f"  - wesad_final_5features.csv    (5 mejores features + etiqueta)")
-print(f"  - fisher_ranking.csv           (ranking completo de Fisher)")
-print(f"  - results_summary.json         (resumen de resultados)")
-print(f"  - fig1_class_distribution.png  (distribución de clases)")
-print(f"  - fig2_top_features_boxplot.png (boxplots features discriminativas)")
-print(f"  - fig3_correlation_matrix.png  (matriz de correlaciones)")
-print(f"  - fig4_distributions_by_class.png (distribuciones por clase)")
-print(f"  - fig5_missing_values.png      (valores faltantes)")
+print(f"  - wesad_features.csv                  (dataset completo con features)")
+print(f"  - wesad_final_5features.csv           (5 mejores features + etiqueta)")
+print(f"  - fisher_ranking.csv                  (ranking completo de Fisher)")
+print(f"  - model_metrics_comparison.csv        (métricas de todos los modelos)")
+print(f"  - results_summary.json                (resumen de resultados)")
+print(f"  - fig1_class_distribution.png         (distribución de clases)")
+print(f"  - fig2_top_features_boxplot.png       (boxplots features discriminativas)")
+print(f"  - fig3_correlation_matrix.png         (matriz de correlaciones)")
+print(f"  - fig4_distributions_by_class.png     (distribuciones por clase)")
+print(f"  - fig5_missing_values.png             (valores faltantes)")
 print(f"  - fig6_fisher_ranking.png             (ranking de Fisher)")
-print(f"  - fig7_fisher_selection_results.png  (top-5 seleccionadas por Fisher)")
+print(f"  - fig7_fisher_selection_results.png   (top-5 seleccionadas por Fisher)")
+print(f"  - fig8_model_comparison.png           (comparación de modelos)")
+print(f"  - fig8b_metrics_per_class_all.png     (precision/recall/F1 por clase — todas)")
+print(f"  - fig8b_metrics_per_class_top5.png    (precision/recall/F1 por clase — top-5)")
+print(f"  - fig9_output_probabilities.png       (probabilidades de salida por modelo)")
+print(f"  (Actividad 7: cálculo manual Naive Bayes y Decision Tree impreso en consola)")
 
 if USE_SYNTHETIC:
     print(f"\n⚠️  NOTA: Se usaron datos SINTÉTICOS porque el dataset WESAD no fue encontrado.")

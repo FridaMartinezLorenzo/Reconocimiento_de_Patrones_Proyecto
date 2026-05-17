@@ -50,7 +50,6 @@ np.random.seed(42)
 # ============================================================================
 # CONFIGURACIÓN
 # ============================================================================
-# Cambiar esta ruta a donde tengas el dataset WESAD descargado de Kaggle
 # Descargar dataset
 path = kagglehub.dataset_download(
     "orvile/wesad-wearable-stress-affect-detection-dataset"
@@ -1511,6 +1510,82 @@ for clf_name, results in all_results.items():
               f"{res['recall']:>7.4f} {res['f1']:>7.4f}")
 
 # ---------------------------------------------------------------------------
+# 6.4b  Reporte por clase: Precision, Recall y F1-Score detallados
+# ---------------------------------------------------------------------------
+print(f"\n\n{'='*80}")
+print("REPORTE POR CLASE — Precision, Recall y F1-Score (No-Stress / Stress)")
+print(f"{'='*80}")
+
+class_names_report = ['No-Stress', 'Stress']
+
+for clf_name, results in all_results.items():
+    for key, res in results.items():
+        tag = "Todas las features" if key == "all" else "Top-5 Fisher"
+        print(f"\n  ── {clf_name}  [{tag}] ──")
+        report = classification_report(
+            y_test, res['y_pred'],
+            target_names=class_names_report,
+            zero_division=0
+        )
+        # Indentar el reporte para que quede alineado
+        for line in report.splitlines():
+            print(f"    {line}")
+
+# Gráfica de barras agrupadas: Precision / Recall / F1 por clase y modelo
+# Una figura por configuración de features (Todas | Top-5)
+for fkey, flabel in [('all', 'Todas las features'), ('top5', 'Top-5 Fisher')]:
+    clf_list   = list(all_results.keys())
+    n_clf      = len(clf_list)
+    metrics_pc = ['precision', 'recall', 'f1']
+    metric_lbls = ['Precision', 'Recall', 'F1-Score']
+    colors_cls  = ['#2ecc71', '#e74c3c']   # verde = No-Stress, rojo = Stress
+
+    fig_pc, axes_pc = plt.subplots(1, n_clf, figsize=(7 * n_clf, 5), sharey=True)
+    if n_clf == 1:
+        axes_pc = [axes_pc]
+
+    for col, clf_name in enumerate(clf_list):
+        ax   = axes_pc[col]
+        res  = all_results[clf_name][fkey]
+        y_pd = res['y_pred']
+
+        # Calcular métricas por clase
+        prec_per  = precision_score(y_test, y_pd, average=None, zero_division=0)
+        rec_per   = recall_score(y_test,    y_pd, average=None, zero_division=0)
+        f1_per    = f1_score(y_test,        y_pd, average=None, zero_division=0)
+        vals_by_class = [prec_per, rec_per, f1_per]   # (3, n_classes)
+
+        x     = np.arange(len(metrics_pc))
+        width = 0.28
+
+        for ci, (cname, ccolor) in enumerate(zip(class_names_report, colors_cls)):
+            vals = [vals_by_class[mi][ci] for mi in range(len(metrics_pc))]
+            offset = (ci - (len(class_names_report) - 1) / 2) * width
+            bars = ax.bar(x + offset, vals, width, label=cname,
+                          color=ccolor, alpha=0.82)
+            for bar in bars:
+                ax.text(bar.get_x() + bar.get_width() / 2,
+                        bar.get_height() + 0.02,
+                        f'{bar.get_height():.3f}',
+                        ha='center', va='bottom', fontsize=8)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(metric_lbls, fontsize=11)
+        ax.set_ylim(0, 1.18)
+        ax.set_ylabel('Valor', fontsize=10)
+        ax.set_title(clf_name, fontsize=12, fontweight='bold')
+        ax.legend(fontsize=9)
+        ax.grid(True, axis='y', alpha=0.3)
+
+    fig_pc.suptitle(f'Precision, Recall y F1-Score por Clase\n[{flabel}]',
+                    fontsize=13, fontweight='bold')
+    plt.tight_layout()
+    fname = f"fig8b_metrics_per_class_{'all' if fkey == 'all' else 'top5'}.png"
+    plt.savefig(os.path.join(OUTPUT_DIR, fname), dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"\nGráfica por clase guardada: {fname}")
+
+# ---------------------------------------------------------------------------
 # 6.5  Análisis del impacto de la selección de características
 # ---------------------------------------------------------------------------
 print(f"\n\n{'='*80}")
@@ -1719,6 +1794,8 @@ print(f"  - fig5_missing_values.png             (valores faltantes)")
 print(f"  - fig6_fisher_ranking.png             (ranking de Fisher)")
 print(f"  - fig7_fisher_selection_results.png   (top-5 seleccionadas por Fisher)")
 print(f"  - fig8_model_comparison.png           (comparación de modelos)")
+print(f"  - fig8b_metrics_per_class_all.png     (precision/recall/F1 por clase — todas)")
+print(f"  - fig8b_metrics_per_class_top5.png    (precision/recall/F1 por clase — top-5)")
 print(f"  - fig9_output_probabilities.png       (probabilidades de salida por modelo)")
 
 if USE_SYNTHETIC:
