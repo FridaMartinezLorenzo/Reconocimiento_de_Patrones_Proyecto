@@ -7,6 +7,15 @@
     "c_RESP_q25"
   ],
   "selection_method": "Fisher Score individual (filtrado)",
+  "n_features_original": 264,
+  "n_features_preprocessed": 200,
+  "n_features_selected": 5,
+  "n_samples": 1049,
+  "n_subjects": 15,
+  "class_distribution": {
+    "0": "736",
+    "1": "313"
+  },
   "fisher_ranking_top20": [
     {
       "Caracter\u00edstica": "c_ACC_mag_zcr",
@@ -15,7 +24,7 @@
     },
     {
       "Caracter\u00edstica": "c_ACC_mag_iqr",
-      "Fisher_Score": 0.6104633025138934,
+      "Fisher_Score": 0.6104633025138932,
       "Rank": 2
     },
     {
@@ -35,7 +44,7 @@
     },
     {
       "Caracter\u00edstica": "c_RESP_std",
-      "Fisher_Score": 0.37481999775415314,
+      "Fisher_Score": 0.37481999775415326,
       "Rank": 6
     },
     {
@@ -60,17 +69,17 @@
     },
     {
       "Caracter\u00edstica": "c_RESP_max",
-      "Fisher_Score": 0.32550722318123043,
+      "Fisher_Score": 0.3255072231812305,
       "Rank": 11
     },
     {
       "Caracter\u00edstica": "c_ECG_hr_mean",
-      "Fisher_Score": 0.3152414696260783,
+      "Fisher_Score": 0.31524146962607824,
       "Rank": 12
     },
     {
       "Caracter\u00edstica": "c_EDA_std",
-      "Fisher_Score": 0.29100623270045,
+      "Fisher_Score": 0.29100623270044995,
       "Rank": 13
     },
     {
