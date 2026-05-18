@@ -68,7 +68,7 @@ Para cada modelo se calculan:
 - F1 ponderado.
 - Matriz de confusion.
 
-## Nota
+## Nota metodologica importante
 
 La seleccion de caracteristicas se calcula solo con `X_train` y `y_train`. Esto evita fuga de informacion hacia el conjunto de prueba.
 
@@ -136,3 +136,32 @@ Para cada experimento de clasificacion se generan salidas adicionales:
 - `regiones_decision_2d.png`: vista 2D de clases, regiones y errores de clasificacion.
 - `arbol_nodos_hojas.png`: solo para arboles, muestra nodos y hojas.
 - `campana_gaussiana_bayes.png`: solo para Bayes gaussiano, muestra una campana de Gauss asociada a la primera caracteristica del experimento.
+
+
+## Actualizacion de requisitos
+
+El proyecto ahora incluye:
+
+- Reporte TXT de EDA en `resultados/eda/reporte_eda.txt`.
+- Discretizacion en tres niveles de `anxiety_level`, `self_esteem` y `depression`.
+- Seleccion de caracteristicas por:
+  - Informacion Mutua.
+  - Chi-cuadrado.
+  - Importancia de Arbol de Decision.
+- Variantes de seleccion por cantidad de caracteristicas: `n=5`, `n=10` y `n=15` por defecto.
+- Resultados de clasificacion organizados por subcarpetas:
+  - `resultados/clasificacion/n_5/`
+  - `resultados/clasificacion/n_10/`
+  - `resultados/clasificacion/n_15/`
+
+### Ejecucion recomendada
+
+```bash
+python main.py --top-k-list 5,10,15
+```
+
+Para ejecutar un solo valor:
+
+```bash
+python main.py --top-k 10
+```

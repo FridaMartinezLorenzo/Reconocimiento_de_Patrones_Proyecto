@@ -56,6 +56,18 @@ REQUIRED_FILES = [
 ]
 
 
+def parse_k_values(raw_values: str) -> list[int]:
+    """Convierte una cadena como '5,10,15' en lista de enteros."""
+    values = []
+    for item in raw_values.split(','):
+        item = item.strip()
+        if item:
+            values.append(int(item))
+    if not values:
+        raise ValueError("Debe indicarse al menos un valor de n para seleccion de caracteristicas.")
+    return sorted(set(values))
+
+
 def create_result_directories() -> None:
     """Crea las carpetas necesarias si no existen."""
     for directory in REQUIRED_DIRECTORIES:
@@ -86,7 +98,11 @@ def validate_project_structure() -> bool:
     return True
 
 
-def run_full_pipeline(top_k: int = 10, drop_stress_level: bool = False, bayes_type: str = "gaussian") -> None:
+def run_full_pipeline(
+    k_values: list[int],
+    drop_stress_level: bool = False,
+    bayes_type: str = "gaussian",
+) -> None:
     """Ejecuta todas las fases del proyecto."""
     if not validate_project_structure():
         raise SystemExit(1)
@@ -95,6 +111,7 @@ def run_full_pipeline(top_k: int = 10, drop_stress_level: bool = False, bayes_ty
     df_raw = load_dataset(DATASET_PATH)
     run_eda(df_raw, EDA_DIR)
     print(f"[OK] Resultados EDA guardados en: {EDA_DIR.relative_to(PROJECT_ROOT)}")
+    print("[OK] Reporte TXT generado en: resultados/eda/reporte_eda.txt")
 
     print("\n[2/5] Ejecutando preprocesamiento...")
     preprocessing_result = run_preprocessing(
@@ -104,31 +121,32 @@ def run_full_pipeline(top_k: int = 10, drop_stress_level: bool = False, bayes_ty
         drop_stress_level=drop_stress_level,
     )
     print(f"[OK] Resultados de preprocesamiento guardados en: {PREPROCESSING_DIR.relative_to(PROJECT_ROOT)}")
+    print("[INFO] Se discretizaron anxiety_level, self_esteem y depression en 3 niveles.")
 
     print("\n[3/5] Ejecutando seleccion de caracteristicas...")
     selection_result = run_feature_selection(
         X_train=preprocessing_result["X_train"],
         y_train=preprocessing_result["y_train"],
         output_dir=FEATURE_SELECTION_DIR,
-        top_k=top_k,
+        k_values=k_values,
     )
     print(f"[OK] Resultados de seleccion guardados en: {FEATURE_SELECTION_DIR.relative_to(PROJECT_ROOT)}")
+    print("[INFO] Metodos usados: Informacion Mutua, Chi-cuadrado e importancia de Arbol.")
     print("[INFO] La seleccion de caracteristicas se calculo solo con entrenamiento.")
 
-    print("\n[4/5] Entrenando modelos Bayes y Arbol...")
+    print("\n[4/5] Entrenando modelos Bayes y Arbol por cada n...")
     summary_df = run_training(
         X_train=preprocessing_result["X_train"],
         X_test=preprocessing_result["X_test"],
         y_train=preprocessing_result["y_train"],
         y_test=preprocessing_result["y_test"],
-        mi_features=selection_result["mi_features"],
-        chi2_features=selection_result["chi2_features"],
+        selected_by_k=selection_result["selected_by_k"],
         output_dir=CLASSIFICATION_DIR,
         bayes_type=bayes_type,
     )
     print(f"[OK] Resultados de clasificacion guardados en: {CLASSIFICATION_DIR.relative_to(PROJECT_ROOT)}")
 
-    print("\n[5/5] Resumen final de modelos:")
+    print("\n[5/5] Resumen final de mejores modelos:")
     print(
         summary_df[
             [
@@ -138,22 +156,22 @@ def run_full_pipeline(top_k: int = 10, drop_stress_level: bool = False, bayes_ty
                 "f1_macro",
                 "f1_weighted",
                 "n_features",
+                "n_selection",
             ]
-        ].to_string(index=False)
+        ].head(12).to_string(index=False)
     )
 
     execution_summary = {
         "dataset": str(DATASET_PATH.relative_to(PROJECT_ROOT)),
         "target_original": "anxiety_level",
         "target_modelado": "anxiety_class",
-        "top_k": top_k,
+        "variables_discretizadas": ["anxiety_level", "self_esteem", "depression"],
+        "k_values": selection_result["k_values"],
         "drop_stress_level": drop_stress_level,
         "bayes_type": bayes_type,
         "n_train": int(len(preprocessing_result["y_train"])),
         "n_test": int(len(preprocessing_result["y_test"])),
         "n_features_train": int(preprocessing_result["X_train"].shape[1]),
-        "mi_features": selection_result["mi_features"],
-        "chi2_features": selection_result["chi2_features"],
         "mejor_modelo": summary_df.iloc[0].to_dict(),
         "nota_metodologica": "La seleccion de caracteristicas se calculo solo con X_train y y_train para evitar fuga de informacion.",
     }
@@ -174,10 +192,15 @@ def main() -> None:
         help="Valida la estructura del proyecto sin ejecutar el pipeline.",
     )
     parser.add_argument(
+        "--top-k-list",
+        default="5,10,15",
+        help="Valores de n para seleccion de caracteristicas. Ejemplo: 5,10,15",
+    )
+    parser.add_argument(
         "--top-k",
         type=int,
-        default=10,
-        help="Numero de mejores caracteristicas a seleccionar. Valor por defecto: 10.",
+        default=None,
+        help="Compatibilidad: ejecuta un solo valor de n. Si se usa, reemplaza --top-k-list.",
     )
     parser.add_argument(
         "--drop-stress-level",
@@ -196,8 +219,10 @@ def main() -> None:
         ok = validate_project_structure()
         raise SystemExit(0 if ok else 1)
 
+    k_values = [args.top_k] if args.top_k is not None else parse_k_values(args.top_k_list)
+
     run_full_pipeline(
-        top_k=args.top_k,
+        k_values=k_values,
         drop_stress_level=args.drop_stress_level,
         bayes_type=args.bayes_type,
     )

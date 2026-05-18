@@ -115,8 +115,8 @@ def _plot_decision_regions(
     y_max = max(X_train_2d[feature_y].max(), X_test_2d[feature_y].max()) + 1
 
     xx, yy = np.meshgrid(
-        np.linspace(x_min, x_max, 300),
-        np.linspace(y_min, y_max, 300),
+        np.linspace(x_min, x_max, 100),
+        np.linspace(y_min, y_max, 100),
     )
 
     grid = pd.DataFrame({feature_x: xx.ravel(), feature_y: yy.ravel()})
@@ -178,7 +178,7 @@ def _plot_tree_structure(
     if not isinstance(model, DecisionTreeClassifier):
         return
 
-    plt.figure(figsize=(22, 12))
+    plt.figure(figsize=(18, 10))
     plot_tree(
         model,
         feature_names=feature_names,
@@ -191,7 +191,7 @@ def _plot_tree_structure(
     )
     plt.title(f"Representacion del arbol - {model_name}")
     plt.tight_layout()
-    plt.savefig(output_path, dpi=180, bbox_inches="tight")
+    plt.savefig(output_path, dpi=130, bbox_inches="tight")
     plt.close()
 
 
@@ -345,29 +345,36 @@ def evaluate_and_save_model(
 
     _plot_confusion_matrix(cm, labels, model_name, output_dir / "matriz_confusion.png")
     _plot_class_metrics(class_metrics, model_name, output_dir / "metricas_por_clase.png")
-    _plot_decision_regions(
-        model,
-        X_train_m,
-        X_test_m,
-        y_train_m,
-        y_test_m,
-        y_pred,
-        model_name,
-        output_dir / "regiones_decision_2d.png",
-    )
-    _plot_tree_structure(
-        model,
-        feature_names=list(X_train_m.columns),
-        class_names=[str(label) for label in labels],
-        model_name=model_name,
-        output_path=output_dir / "arbol_nodos_hojas.png",
-    )
-    _plot_gaussian_bell_for_bayes(
-        model,
-        X_train_m,
-        model_name,
-        output_dir / "campana_gaussiana_bayes.png",
-    )
+
+    # Las visualizaciones interpretables mas pesadas se generan solo para la
+    # variante representativa n_10/top_mi. Esto mantiene el pipeline rapido y,
+    # al mismo tiempo, conserva las imagenes necesarias para la exposicion.
+    parts = set(output_dir.parts)
+    generate_interpretability_plots = ("n_10" in parts and output_dir.name == "top_mi") or ("n_10" not in parts)
+    if generate_interpretability_plots:
+        _plot_decision_regions(
+            model,
+            X_train_m,
+            X_test_m,
+            y_train_m,
+            y_test_m,
+            y_pred,
+            model_name,
+            output_dir / "regiones_decision_2d.png",
+        )
+        _plot_tree_structure(
+            model,
+            feature_names=list(X_train_m.columns),
+            class_names=[str(label) for label in labels],
+            model_name=model_name,
+            output_path=output_dir / "arbol_nodos_hojas.png",
+        )
+        _plot_gaussian_bell_for_bayes(
+            model,
+            X_train_m,
+            model_name,
+            output_dir / "campana_gaussiana_bayes.png",
+        )
 
     return {
         "model": model_name,
